@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Reference/sample media (kept locally, not tracked)
+sampleVideo.mp4
