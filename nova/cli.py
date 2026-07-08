@@ -11,7 +11,7 @@ import sys
 from .agent import Agent
 from .config import Settings
 from .llm.base import Message, Role
-from .llm.openai_provider import OpenAIProvider
+from .llm.factory import build_provider
 from .tools.base import ToolRegistry
 from .tools.filesystem import DEFAULT_TOOLS
 
@@ -31,24 +31,23 @@ def _show_tool(name: str, args: dict) -> None:
 
 def main() -> int:
     settings = Settings.load()
-    if not settings.openai_api_key:
-        print(
-            "Missing OPENAI_API_KEY. Copy .env.example to .env and add your key.",
-            file=sys.stderr,
-        )
+    try:
+        provider, model = build_provider(settings)
+    except RuntimeError as exc:
+        print(f"{exc}\nCopy .env.example to .env and fill it in.", file=sys.stderr)
         return 1
 
     agent = Agent(
         name="Nova",
-        provider=OpenAIProvider(api_key=settings.openai_api_key),
-        model=settings.openai_model,
+        provider=provider,
+        model=model,
         system=SYSTEM_PROMPT,
         tools=ToolRegistry(DEFAULT_TOOLS),
         max_tokens=settings.max_tokens,
     )
 
     print(BANNER)
-    print(f"(model: {settings.openai_model})\n")
+    print(f"(provider: {provider.name}, model: {model})\n")
     history: list[Message] = []
 
     while True:

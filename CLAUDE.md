@@ -3,6 +3,12 @@
 > This file is the source of truth for what Nova is, how it's built, and how we
 > work on it. Read it at the start of every session. Keep it current: when scope,
 > architecture, or conventions change, update this file in the same change.
+>
+> **Design docs** (the thorough versions — keep in sync with this file):
+> - `docs/DESIGN.md` — rationale, key decisions, domain model, architecture +
+>   component + sequence diagrams, concurrency & security.
+> - `docs/API.md` — backend API catalogue (REST + WebSocket event contract).
+> - `docs/ROADMAP.md` — phased plan of execution with acceptance criteria.
 
 ## What Nova is
 
@@ -43,9 +49,12 @@ The long-term shape (inspiration, not a spec):
 You ─► Orchestrator/Router (an Agent, any model)
           └─ delegates via tool-calls ─► specialized sub-agents (each: prompt+model+tools)
                                               └─ all model calls go through ─► LLMProvider
-                                                                                 ├─ OpenAI  (built)
-                                                                                 ├─ Anthropic (later)
+                                                                                 ├─ OpenAI    (built)
+                                                                                 ├─ Anthropic (built)
                                                                                  └─ Gemini    (later)
+
+Which provider backs the agent is chosen by `NOVA_PROVIDER` (openai | anthropic)
+via `nova/llm/factory.py` — a config change, not a code change.
 ```
 
 ## Layout
@@ -66,7 +75,9 @@ nova/
 ## Roadmap / status
 
 - [x] **Step 1** — provider seam + OpenAI adapter + generic agent + file tools + CLI
-- [ ] **Step 2** — second provider adapter (Anthropic or Gemini) to prove swappability
+- [x] **Step 2** — Anthropic adapter + provider factory (`NOVA_PROVIDER` switch).
+      Translation logic verified offline; pending a live test once an
+      `ANTHROPIC_API_KEY` is available.
 - [ ] **Step 3** — specialized agents + the router/orchestrator
 - [ ] **Step 4** — shared state / memory + per-agent status (what the dashboard reads)
 - [ ] **Step 5** — React dashboard (the agent-graph visualization)
