@@ -35,22 +35,34 @@ regression, graceful no-key failure. **Pending:** live Anthropic call (needs an
 
 ---
 
-## Phase 3 — Orchestrator + specialized agents  **[~] NOW (backend, CLI-driven)**
+## Phase 3 — Orchestrator + specialized agents  **[x] DONE (backend, CLI-driven)**
 
 Turn one agent into a coordinated team. **No HTTP yet** — proven in the terminal.
 
-- [ ] **3a. Agent registry** (`orchestrator/registry.py`) — agent definitions as
-  config: role → system prompt + provider/model + tool set. Seed 2–3 agents
-  (e.g. Research, Files/Dev, General).
-- [ ] **3b. Delegation tool** (`orchestrator/delegation.py`) — a tool the router
-  calls to hand a task to a sub-agent and get its result back.
-- [ ] **3c. Router** (`orchestrator/router.py`) — an `Agent` whose tools are the
-  delegations; LLM-based routing (Decision D6).
-- [ ] **3d. CLI wiring** — talk to the router; it delegates; results return.
+- [x] **3a. Agent registry** (`orchestrator/registry.py`) — agent definitions as
+  config: role → system prompt + provider/model + tool set. Seeded `files` and
+  `general` (tool-honest to what exists today); `ProviderPool` lets each agent run
+  on a different vendor. Tools resolved by name via `tools/catalog.py`.
+- [x] **3b. Delegation tool** (`orchestrator/delegation.py`) — the `delegate(agent,
+  task)` tool runs a sub-agent on a **fresh history** (Decision D10) and returns its
+  result string; observers surface nested activity (the future event-bus seam).
+- [x] **3c. Router** (`orchestrator/router.py`) — an `Agent` whose only tool is
+  `delegate`; LLM-based routing (Decision D6). Built with its team; can't self-delegate.
+- [x] **3d. CLI wiring** — the terminal talks to the router; delegations and
+  sub-agent tool use print as nested activity.
+
+**Verified:** 14 offline checks (scripted stub provider) — router composes a final
+answer from a delegated result, sub-agents run stateless on a fresh history, tool
+results feed back, provider pool caches one client per vendor, registry wires
+tools/models, and the error paths (unknown agent, empty task, unknown tool) all
+return strings / raise as intended. **Pending:** a live end-to-end run once deps are
+installed (`pip install -e .`).
 
 **Acceptance:** in the terminal, a request like *"research X, then summarize the
 files in this project"* visibly routes to the right sub-agents and returns a
 combined answer. Each agent can run on a different provider.
+*(Note: `research` awaits a web tool; today's seed proves routing with `files` +
+`general`, e.g. "summarize nova/llm, then write a one-line tagline".)*
 
 ---
 

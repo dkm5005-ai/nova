@@ -67,6 +67,11 @@ nova/
   tools/
     base.py            # Tool + ToolRegistry
     filesystem.py      # read-only, project-sandboxed file tools
+    catalog.py         # name → Tool lookup (agents list tools by name)
+  orchestrator/
+    registry.py        # AgentDef (config) + seed team + build_agents()
+    delegation.py      # the delegate(agent, task) tool
+    router.py          # the router Agent (its one tool is delegate)
   agent.py             # the generic agent tool-use loop
   config.py            # env/.env settings
   cli.py               # terminal chat (temporary face on the core)
@@ -78,7 +83,11 @@ nova/
 - [x] **Step 2** — Anthropic adapter + provider factory (`NOVA_PROVIDER` switch).
       Translation logic verified offline; pending a live test once an
       `ANTHROPIC_API_KEY` is available.
-- [ ] **Step 3** — specialized agents + the router/orchestrator
+- [x] **Step 3** — specialized agents + the router/orchestrator. Registry, the
+      `delegate(agent, task)` tool (stateless sub-agents per D10), the router
+      Agent, and CLI wiring. Verified offline (14 checks: delegation, fresh-history
+      sub-agent runs, result composition, provider pool, error paths). Pending a
+      live run once deps are installed (`pip install -e .`).
 - [ ] **Step 4** — shared state / memory + per-agent status (what the dashboard reads)
 - [ ] **Step 5** — React dashboard (the agent-graph visualization)
 

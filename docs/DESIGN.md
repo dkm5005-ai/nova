@@ -227,7 +227,7 @@ spine that feeds the dashboard.
 └───────────────▲──────────────────────────────────────▲────────────────┘
                 │ submit request                        │ subscribe
 ┌───────────────┴────────────────────┐     ┌────────────┴────────────────┐
-│  ORCHESTRATION                      │     │  EVENT BUS (in-process)      │   [PLANNED]
+│  ORCHESTRATION            [DONE]     │     │  EVENT BUS (in-process)      │   [PLANNED]
 │   Router agent · Agent registry     │────►│  publish agent/task/tool     │
 │   Delegation tool                   │     │  events to subscribers       │
 └───────────────▲────────────────────┘     └────────────┬────────────────┘
@@ -268,7 +268,7 @@ nova/
   config.py            env/.env settings                  [DONE]
   cli.py               terminal face                      [DONE]
 
-  orchestrator/                                          [Step 3 — NOW]
+  orchestrator/                                          [DONE]
     registry.py        agent definitions (role→prompt+model+tools)
     router.py          builds the router Agent; routing strategy
     delegation.py      the delegate(agent, task) tool
@@ -373,6 +373,6 @@ REST GET /api/events?after=cursor  ── replays persisted events (poll/fallbac
 ## 11. Target layout (end state)
 
 See the component diagram (§7) for the package tree. Today `nova/llm`, `nova/tools`,
-`nova/agent.py`, `nova/config.py`, `nova/cli.py` exist and are verified. `orchestrator/`,
-`state/`, `memory/`, `api/`, and `frontend/` are introduced by Steps 3–6.
+`nova/orchestrator`, `nova/agent.py`, `nova/config.py`, `nova/cli.py` exist and are
+verified. `state/`, `memory/`, `api/`, and `frontend/` are introduced by Steps 4–6.
 ```

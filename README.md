@@ -22,7 +22,7 @@ agents' live state from the backend.
 
 - [x] **Step 1** — provider seam + OpenAI adapter + generic agent + file tools + CLI
 - [x] **Step 2** — Anthropic adapter + provider factory (`NOVA_PROVIDER` switch)
-- [ ] Step 3 — specialized agents + the router
+- [x] **Step 3** — specialized agents + the router/orchestrator (`delegate` tool)
 - [ ] Step 4 — shared state / memory + agent status
 - [ ] Step 5 — React dashboard
 
