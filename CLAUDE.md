@@ -86,8 +86,9 @@ nova/
 - [x] **Step 3** — specialized agents + the router/orchestrator. Registry, the
       `delegate(agent, task)` tool (stateless sub-agents per D10), the router
       Agent, and CLI wiring. Verified offline (14 checks: delegation, fresh-history
-      sub-agent runs, result composition, provider pool, error paths). Pending a
-      live run once deps are installed (`pip install -e .`).
+      sub-agent runs, result composition, provider pool, error paths) **and live**
+      on OpenAI: the router delegates to `files` (nested tool use visible) and
+      composes the answer, and answers trivial parts directly.
 - [ ] **Step 4** — shared state / memory + per-agent status (what the dashboard reads)
 - [ ] **Step 5** — React dashboard (the agent-graph visualization)
 

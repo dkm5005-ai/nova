@@ -55,8 +55,10 @@ Turn one agent into a coordinated team. **No HTTP yet** — proven in the termin
 answer from a delegated result, sub-agents run stateless on a fresh history, tool
 results feed back, provider pool caches one client per vendor, registry wires
 tools/models, and the error paths (unknown agent, empty task, unknown tool) all
-return strings / raise as intended. **Pending:** a live end-to-end run once deps are
-installed (`pip install -e .`).
+return strings / raise as intended. **Live run confirmed** on OpenAI
+(`gpt-4.1-mini`): the router delegates file questions to `files` (its `list_files`/
+`read_file` use visible as nested activity), composes the final answer, and handles
+trivial writing directly.
 
 **Acceptance:** in the terminal, a request like *"research X, then summarize the
 files in this project"* visibly routes to the right sub-agents and returns a
