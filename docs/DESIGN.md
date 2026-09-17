@@ -73,6 +73,96 @@ Decisions marked **(Proposed)** are the ones I want your sign-off on before Step
 | D7 | Auth | **None; bind to localhost** initially; **token auth before any remote exposure** *(Proposed)* | Personal, local-first; don't build SSO we don't need | API key/JWT now (premature) |
 | D8 | Agent definitions | **Config/data, not subclasses** | One generic `Agent` loop; agents = prompt + model + tools | Class-per-agent (violates a core principle) |
 | D9 | Task execution | **In-process background tasks** (asyncio tasks) with a task registry | Simple, observable; long agent runs don't block the API | External worker/queue (later, if scale demands) |
+| D10 | Orchestration model | **LLM router + stateless sub-agents; no explicit state graph** *(Proposed)* | Matches open-ended "do whatever I ask" Jarvis delegation you can't pre-draw; keeps the minimal seam and one generic `Agent` loop | LangGraph / explicit state-graph engine (borrow its ideas selectively, see §4.1) |
+| D11 | Semantic memory | **Design the `SemanticMemory` + `EmbeddingProvider` seams now; build the engine in Step 4. Structured state stays in SQLite; vectors default to `sqlite-vec`, LanceDB the sanctioned upgrade** *(Proposed)* | Keeps memory swappable and provider-agnostic without building a store that has no consumer yet; one-file/local-first preserved until scale demands more | LanceDB now (a 2nd store before the 1st exists), hosted vector DB (breaks local-first, wrong scale), no seam / hardwire a vendor (breaks provider-agnostic) |
+
+### 4.2 Semantic / embedding-based recall (D11)
+
+**Question raised.** Should shared memory support semantic (embedding-based) recall,
+and if so, is SQLite the right home — or LanceDB now?
+
+**Two axes, kept separate.** "Vector memory" bundles two decisions:
+1. **Where vectors live** (the store).
+2. **Who computes embeddings** (the model) — an *provider* call, like a completion.
+
+**Decision.**
+
+- **Structured state stays in SQLite.** The domain model (§5) is relational (tasks,
+  conversations, messages, events, key/value memory, with FKs). That is SQLite's
+  job; a vector store is not a good home for it. So a vector engine is always an
+  *addition*, never a replacement — adopting one means running **two** stores.
+- **Design the seams now, build the engine in Step 4.** Introduce two interfaces:
+  - `SemanticMemory` repo — `upsert(key, text, metadata)` / `search(query, k, filter)`.
+  - `EmbeddingProvider` — sibling to `LLMProvider`; `embed(text) -> vector`. Keeps
+    embeddings vendor-swappable (hosted e.g. OpenAI `text-embedding-3-*`, or local
+    e.g. `sentence-transformers` for offline recall). This is the real long pole —
+    it decides recall quality and whether memory works offline.
+  Because both are behind interfaces (principle 9), choosing the engine later is a
+  single-layer swap, and building it *now* — before an agent consumes it — would
+  violate backend-first / one-step-at-a-time (Step 3, the orchestrator, isn't built).
+- **Engine ladder.** Default **`sqlite-vec`** (vectors in the *same* SQLite file →
+  one file, atomic fact+embedding writes, zero extra store). **LanceDB** is the
+  sanctioned local upgrade when the vector layer outgrows it. **`pgvector`** is the
+  convergence point *if/when* we adopt Postgres anyway (D3's stated later swap).
+- **Not** a hosted vector DB (Pinecone/Weaviate/Milvus): built for approximate
+  search over hundreds of millions of vectors across tenants — the opposite of a
+  single-owner, local-first assistant. Wrong scale; breaks local-first.
+
+**Relationship to the key/value `MemoryStore`.** Semantic memory *coexists* with the
+scoped key/value store (§5 `MemoryEntry`) — it does not replace it. Key/value is for
+exact facts (`owner.company`); semantic is for "what did I say about X?" recall. Both
+sit behind the memory repository layer.
+
+### 4.1 Orchestration: LLM-router vs. explicit-state-graph (D10)
+
+**Question raised.** Do we need to pass explicit state between agents, à la LangGraph
+(a typed `State` object threaded through a predefined graph of nodes)?
+
+**Decision.** No — not now, and not the whole framework. Nova orchestrates by
+**LLM-driven delegation**: the router *is* an agent, and it decides what runs next
+by calling `delegate(agent, task)`. Sub-agents are **stateless workers** — each runs
+its own generic `Agent` loop on a fresh history seeded with the task string, and
+**returns its result as a string** that becomes a tool-result in the router's history.
+The router holds the whole picture and composes multi-step work by feeding one
+result into the next task. This keeps two core principles intact: the *minimal
+provider seam* (nothing owns model calls but our adapters) and *agents-are-config,
+one generic loop*.
+
+**Two paradigms — why they differ.**
+
+| | Our approach (LLM router) | LangGraph (explicit state graph) |
+|---|---|---|
+| Who picks the next step | The **model** (router reasons, calls `delegate()`) | **You** — edges in a predefined graph |
+| State | Router history + shared memory (Step 4) | A typed `State` object merged through every node |
+| Character | Emergent, flexible, agentic | Deterministic, auditable, testable |
+
+**What explicit state genuinely buys you** (the reasons to reach for a graph engine),
+and how Nova will absorb each *through its own seams* rather than adopt the framework:
+
+- **Durable execution / resume after crash** → make `TaskRepo` (Step 4) store enough
+  to replay a task; state lives in the repositories, not in-process strings.
+- **Human-in-the-loop pause/approve** → *prioritized.* Already implied by "irreversible
+  actions gated behind confirmation" (§10). A confirmation gate is a lightweight
+  interrupt; persisted task state lets us pause and resume it.
+- **Deterministic, repeatable routines** (e.g. a morning briefing) → add small
+  **rule-based/hardcoded flows alongside** the router. Decision D6 already frames
+  routing strategy as a knob (LLM now, rule-based later); D10 is consistent with it.
+- **Bounded refine cycles, fan-out/fan-in, time-travel debugging** → deferred; add
+  only when a concrete flow needs them.
+
+**Shared state, when strings aren't enough.** Cross-agent state goes through the
+Step-4 `MemoryStore` (`scope: global | <agent_id>`), *not* a new agent-to-agent
+channel — because memory is observable (emits events the dashboard reads) and
+persistent. A `conversation_id`-scoped **scratchpad/blackboard** (any agent on the
+same task reads/writes a shared working set mid-task) is the one enhancement we'd
+consider next — but only when a real flow proves string-passing + memory clumsy,
+as a deliberate Step-4 addition, not speculatively.
+
+**When we'd revisit.** If Nova evolves from conversational Jarvis into a **workflow
+engine** — many long-running, repeatable, multi-step flows that must survive restarts
+and pause for approval — that's the point to adopt LangGraph's patterns wholesale (or
+the library itself). We are not there; starting there would violate backend-first and
+one-step-at-a-time.
 
 ---
 
@@ -169,6 +259,7 @@ nova/
     base.py            neutral types + LLMProvider interface
     factory.py         build_provider(settings) → (provider, model)
     openai_provider.py · anthropic_provider.py
+    embedding.py       EmbeddingProvider seam (embed text → vector)   [Step 4 — D11]
   tools/                                                [partial]
     base.py            Tool + ToolRegistry
     filesystem.py      read-only sandboxed file tools
@@ -189,8 +280,10 @@ nova/
     eventbus.py        in-process pub/sub
 
   memory/                                                [Step 4]
-    store.py           MemoryStore (over a repo)
+    store.py           MemoryStore (over a repo)          key/value, scoped
     tool.py            memory_read / memory_write tools
+    semantic.py        SemanticMemory seam (upsert/search)   [D11 — engine later:
+                       sqlite-vec default → LanceDB → pgvector; interface now]
 
   api/                                                   [Step 5]
     app.py             FastAPI app factory

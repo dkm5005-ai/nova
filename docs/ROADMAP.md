@@ -62,9 +62,14 @@ Make the system persistent and observable — the data the dashboard will read.
 - [ ] **4b. Repositories + SQLite** (`state/repositories.py`, `state/sqlite.py`).
 - [ ] **4c. Event bus** (`state/eventbus.py`) — in-process pub/sub; orchestrator
   and agents emit `agent.*` / `task.*` / `tool.*` events (see `API.md`).
-- [ ] **4d. Memory** (`memory/`) — shared `MemoryStore` + `memory_read`/`memory_write`
-  tools so agents persist facts across runs.
+- [ ] **4d. Memory** (`memory/`) — shared `MemoryStore` (scoped key/value) +
+  `memory_read`/`memory_write` tools so agents persist facts across runs.
 - [ ] **4e. Per-agent status tracking** driven off the event bus.
+- [ ] **4f. Semantic-memory seams** (Decision D11) — define the `SemanticMemory`
+  repo interface (`upsert`/`search`) and the `EmbeddingProvider` seam (sibling to
+  `LLMProvider`). **Interfaces + a default engine only** (`sqlite-vec`, vectors in
+  the same SQLite file); LanceDB/pgvector remain swap-later. Deferred until a real
+  consumer exists — don't build a store nothing calls.
 
 **Acceptance:** after a CLI session, tasks/conversations/events are queryable from
 the store; agents can write and recall a fact via memory; an event log reflects
