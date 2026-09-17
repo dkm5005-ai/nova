@@ -72,6 +72,10 @@ nova/
     registry.py        # AgentDef (config) + seed team + build_agents()
     delegation.py      # the delegate(agent, task) tool
     router.py          # the router Agent (its one tool is delegate)
+  state/               # persistence (Step 4a/4b): models + repos + SQLite
+    models.py          # Task, Conversation, Message, Event dataclasses
+    repositories.py    # repo interfaces (Task/Conversation/Message/Event)
+    sqlite.py          # SqliteStore + repo implementations (D3; swappable)
   agent.py             # the generic agent tool-use loop
   config.py            # env/.env settings
   cli.py               # terminal chat (temporary face on the core)
@@ -89,7 +93,11 @@ nova/
       sub-agent runs, result composition, provider pool, error paths) **and live**
       on OpenAI: the router delegates to `files` (nested tool use visible) and
       composes the answer, and answers trivial parts directly.
-- [ ] **Step 4** — shared state / memory + per-agent status (what the dashboard reads)
+- [~] **Step 4** — shared state / memory + per-agent status (what the dashboard reads).
+      **Slice A done**: `state/` persistence core — models, repo interfaces, and a
+      SQLite store (DB path configurable via `NOVA_DB_PATH`, default `~/.nova/nova.db`).
+      Verified offline (16 checks: roundtrips, filters, subtasks, event cursor, reopen).
+      Next: Slice B (event bus + orchestrator wiring), Slice C (memory + tools).
 - [ ] **Step 5** — React dashboard (the agent-graph visualization)
 
 ## Conventions
